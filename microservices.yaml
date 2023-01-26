@@ -1,0 +1,99 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: products
+spec:
+  selector:
+    matchLabels:
+      app: products
+  template:
+    metadata:
+      labels:
+        app: products
+    spec:
+      containers:
+        - name: products
+          image: sentinelfoxinc/ingress_http_rules_demo:v1.0
+          ports:
+            - containerPort: 80
+              name: products-port
+          env:
+            - name: PHP_SERVICE_AS
+              value: "products"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders
+spec:
+  selector:
+    matchLabels:
+      app: orders
+  template:
+    metadata:
+      labels:
+        app: orders
+    spec:
+      containers:
+        - name: orders
+          image: sentinelfoxinc/ingress_http_rules_demo:v1.0
+          ports:
+            - containerPort: 80
+              name: orders-port
+          env:
+            - name: PHP_SERVICE_AS
+              value: "orders"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: products-svc
+spec:
+  selector:
+    app: products
+  ports:
+    - port: 8980
+      name: products-svc-port
+      protocol: TCP
+      targetPort: products-port
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orders-svc
+spec:
+  selector:
+    app: orders
+  ports:
+    - port: 8981
+      name: orders-svc-port
+      protocol: TCP
+      targetPort: orders-port
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: microservices
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  labels:
+    name: microservices
+spec:
+  rules:
+    - http:
+        paths:
+          - pathType: Prefix
+            path: /products
+            backend:
+              service:
+                name: products-svc
+                port:
+                  number: 8980
+          - pathType: Prefix
+            path: /orders
+            backend:
+              service:
+                name: orders-svc
+                port:
+                  number: 8981
